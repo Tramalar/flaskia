@@ -3,16 +3,16 @@
 {% block content %}
 	<fieldset>
 	<legend>lisää vuokraus-tapahtuma</legend>
-	<form action="lisays" method="post">
+	<form action="lisaa" method="post">
 		<p><label>Vuokraus-pvm: <input type="date" name="vuokraus"/></label>
-			{%if vvirhe%}
-				<label>Syötä vuokrauspäivämäärä muodossa yyyy-mm-pp!</label>
-			{%endif%}
+			
+				<label>{{vvirhe}}</label>
+
 		</p>
 		<p><label>Palautus-pvm: <input type="date" name="palautus"/></label> 
-			{%if pvirhe%}
-				<label>Palautuspäivämäärän tulee olla vuokrauspäivämäärän jälkeen ja muodossa yyyy-mm-pp!</label>
-			{%endif%}
+
+				<label>{{pvirhe}}</label>
+
 		</p>
 		<p>
 			<label> Elokuva: 
@@ -32,6 +32,7 @@
 				</select>
 			</label>
 		</p>
+		<p>{{ lvirhe }}</p>
 		<input type="submit" value="Lisää" />
 	</form>
 	</fieldset>

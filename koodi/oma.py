@@ -42,13 +42,14 @@ def auth(f):
             return redirect(url_for('kirjaudu'))
         return f(*args, **kwargs)
     return decorated
-	
+    
 @app.route('/ulos',methods=["POST","GET"])
 @auth
 def kirjauduUlos():
     if(request.method=="POST"):
         try:        
             session.pop('logged', "")
+            con.close()
             return redirect(url_for('kirjaudu'))
         except Exception as e:
             return str(e)
@@ -164,17 +165,10 @@ def elokuvat():
         lista.append((rivi['ElokuvaId'],"%s (%d), Genre: %s, Arvio: %d/10, vuokrahinta: %.1f euroa" %(rivi['Nimi'],rivi['jv'],rivi['tn'],rivi['arvio'],rivi['vh'])))
     cur.close()
     return render_template("elokuvat.html",lista=lista)
-@app.route('/lisaa')
+    
+@app.route('/lisaa', methods=["POST", "GET"])
 @auth
 def lisaa():
-    if ('vvirhe' in request.args):
-        vvirhe = request.args['vvirhe']=='True'
-    else:
-        vvirhe=False
-    if ('pvirhe' in request.args):
-        pvirhe = request.args['pvirhe']=='True'
-    else:
-        pvirhe=False
     cur=con.cursor()
     cur.execute("""
     SELECT Nimi, JasenId
@@ -191,8 +185,59 @@ def lisaa():
     for rivi in cur:
         listaE.append((rivi['Nimi'],rivi['ElokuvaId']))
     
-    return render_template("lisaa.html",listaE=listaE,listaJ=listaJ,vvirhe=vvirhe,pvirhe=pvirhe)
+    virhe=("","","")
+    if(request.method=="POST"):
+        onnistui=True
+        virhe=lisays(request.form)
+        for i in virhe:
+            if i:
+                onnistui=False
+                break;
+        if(onnistui):   
+	        return redirect(url_for('vuokrat'))
+    return render_template("lisaa.html",listaE=listaE,listaJ=listaJ,vvirhe=virhe[0],pvirhe=virhe[1],lvirhe=virhe[2])
+ 
 
+
+def lisays(lomake): 
+    jid= lomake.get("jasen")
+    eid= lomake.get("leffa")
+    vpv= lomake.get("vuokraus")
+    ppv= lomake.get("palautus") 
+    if(str(vpv)==""):
+        return ("ei vuokrauspaivaa","","")
+    try:
+        vuokpaiv=parse(vpv).date()
+    except ValueError:
+        return ("vuokrauspaivassa vikaa","","")
+        
+    if(str(ppv)==""):
+        try:
+            con.execute("""
+            INSERT INTO Vuokraus (JasenId,ElokuvaId,vuokrauspvm)
+            VALUES (:jasenid, :elokuva, :vuokraus)
+            """, {"jasenid": int(jid), "elokuva": int(eid),"vuokraus": vuokpaiv})  
+            con.commit()
+        except:
+            return ("","","lisays epaonnistui")
+    else:
+        try:
+            try:
+                palpaiv=parse(ppv).date()
+            except ValueError:
+                return ("","palautuspaivassa vikaa","")
+            if(palpaiv < vuokpaiv):
+                return ("","Palautus ennen vuokrausta","")
+            con.execute("""
+            INSERT INTO Vuokraus (JasenId,ElokuvaId,vuokrauspvm,palautuspvm)
+            VALUES (:jasenid, :elokuva, :vuokraus, :palautus )
+            """, {"jasenid": int(jid), "elokuva": int(eid),"vuokraus": vuokpaiv, "palautus": palpaiv})   
+            con.commit()
+        except:
+            return ("","","lisays epaonnistui")
+    return ("","","")
+    
+    
 @app.route('/lisaaelokuva')
 @auth   
 def lisaaelokuva():
@@ -249,46 +294,6 @@ def leffanlisays():
     
     return redirect(url_for('elokuvat'))
 
-@app.route('/lisays', methods=["POST"])
-@auth
-def lisays(): 
-    jid= request.form.get("jasen")
-    eid= request.form.get("leffa")
-    vpv= request.form.get("vuokraus")
-    ppv= request.form.get("palautus") 
-    if(str(vpv)==""):
-        return redirect(url_for('lisaa', vvirhe=True))
-    try:
-        vuokpaiv=parse(vpv).date()
-    except ValueError:
-        return redirect(url_for('lisaa', vvirhe=True))
-        
-    if(str(ppv)==""):
-        try:
-            con.execute("""
-            INSERT INTO Vuokraus (JasenId,ElokuvaId,vuokrauspvm)
-            VALUES (:jasenid, :elokuva, :vuokraus)
-            """, {"jasenid": int(jid), "elokuva": int(eid),"vuokraus": vuokpaiv})  
-            con.commit()
-        except Exception as e:
-            return str(e)
-    else:
-        try:
-            try:
-                palpaiv=parse(ppv).date()
-            except ValueError:
-                return redirect(url_for('lisaa', pvirhe=True))
-            if(palpaiv < vuokpaiv):
-                return redirect(url_for('lisaa',pvirhe=True))     
-            con.execute("""
-            INSERT INTO Vuokraus (JasenId,ElokuvaId,vuokrauspvm,palautuspvm)
-            VALUES (:jasenid, :elokuva, :vuokraus, :palautus )
-            """, {"jasenid": int(jid), "elokuva": int(eid),"vuokraus": vuokpaiv, "palautus": palpaiv})   
-            con.commit()
-        except Exception as e:
-            return str(e)
-    return redirect(url_for('vuokrat'))
-    
 if __name__ == '__main__':
     app.debug = True
     app.run(debug=True)
