@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Lisää{% endblock title%}
+{% block content %}
+	<fieldset>
+	<legend>lisää vuokraus-tapahtuma</legend>
+	<form action="lisays" method="post">
+		<p><label>Vuokraus-pvm: <input type="date" name="vuokraus"/></label>
+			{%if vvirhe%}
+				<label>Syötä vuokrauspäivämäärä muodossa yyyy-mm-pp!</label>
+			{%endif%}
+		</p>
+		<p><label>Palautus-pvm: <input type="date" name="palautus"/></label> 
+			{%if pvirhe%}
+				<label>Palautuspäivämäärän tulee olla vuokrauspäivämäärän jälkeen ja muodossa yyyy-mm-pp!</label>
+			{%endif%}
+		</p>
+		<p>
+			<label> Elokuva: 
+				<select name="leffa">
+				{%for leffa, id in listaE%}
+					<option value={{id}}>{{leffa}}</option>
+				{%endfor%}
+				</select>
+			</label>
+		</p>
+		<p>
+			<label> Jäsen: 
+				<select name="jasen">
+				{%for jasen, id in listaJ%}
+					<option value= {{id}}>{{jasen}}</option>
+				{%endfor%}
+				</select>
+			</label>
+		</p>
+		<input type="submit" value="Lisää" />
+	</form>
+	</fieldset>
+	
+{% endblock content %}    

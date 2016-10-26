@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Vuokrat{% endblock title%}
+{% block content %}
+	<ul>
+		{% set idNyt=-1 %}
+		{%for jid,jn,en,vp,pp in lista %}
+		    {%if not(idNyt==jid)%}
+			    {% if not(idNyt==-1)%} </ul>{% endif %}
+				<li>{{jn}}</li>
+					<ul>
+						<li>{{en}}, {{vp}}, {{pp}}</li>
+					
+			{% else %}
+						<li>{{en}}, {{vp}}, {{pp}}</li>
+			{%endif%}
+		    {% set idNyt=jid %}
+		{%endfor%}
+	    </ul>
+	</ul>
+{% endblock content %}    
+

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Lisää elokuva{% endblock title%}
+{% block content %}
+	<fieldset>
+	<legend>Lisää elokuva</legend>
+	<form action="leffanlisays" method="post">
+		<p><label>Elokuvan nimi: <input type="text" name="leffa"/></label>
+			{%if virhe%}
+				<label>Syötä elokuvan nimi!</label>
+			{%endif%}
+		</p>
+		<p>
+			<label>Julkaisuvuosi: <input type="Number" name="vuosi"/></label>
+			{%if vvirhe%}
+				<label>Syötä julkaisuvuosi!</label>
+			{%endif%}
+	    </p>
+		<p><label>Arvio: <input type="Number" name="arvio" min="0" max="10"/>
+			{%if avirhe %}
+				<label>Syötä arvio!</label>
+			{%endif%}</label></p>
+		<p><label>Vuokrahinta: <input type="Number" name="hinta" min="0" step="0.1"/></label>
+			{%if hvirhe%}
+				<label>Syötä vuokrahinta!</label>
+			{%endif%}</p>
+		<p>
+			<label> Lajityyppi: 
+				<select name="genre">
+				{%for lajityyppi, id in listaG%}
+					<option value= {{id}}>{{lajityyppi}}</option>
+				{%endfor%}
+				</select>
+			</label>
+		</p>
+		<input type="submit" value="Lisää" />
+	</form>
+	</fieldset>
+	
+{% endblock content %}    

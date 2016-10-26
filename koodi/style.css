@@ -1,0 +1,12 @@
+.navigointi{
+	list-style-type:none;
+}
+.navigointi li{
+	display:inline;
+	padding:20px;
+}
+
+.leffalinkki{
+	text-decoration:none;
+	color:black;
+}

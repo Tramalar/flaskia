@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Elokuvat{% endblock title%}
+{% block content %}
+	<ul>
+		{% for id, i in lista %}
+		     <li><a href="./muokkaus/{{id}}" class="leffalinkki">{{i}}</a></li>
+		{% endfor %}
+	</ul>
+{% endblock content %}    
+

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="../style.css"/>
+	<meta content="text/html; charset=UTF-8" />
+    <title>{% block title %}{% endblock title %}</title>
+</head>
+<body>
+    <header>
+		<nav>
+			<ul class=navigointi>
+				<li><a href="./">Vuokrat</a></li>
+				<li><a href="./lisaa">Lisää vuokraus</a></li>
+				<li><a href="./lisaaelokuva">Lisää elokuva</a></li>
+				<li><a href="./elokuvat">Elokuvat</a></li>
+				<li><a href="./ulos">Kirjaudu ulos</a></li>
+			</ul>
+		</nav>
+	</header>	
+    {% block content %}
+    {% endblock content%}
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta content="text/html; charset=UTF-8" />
+    <title>Muokkaa elokuvaa</title>
+</head>
+<fieldset>
+<legend>Muokkaa elokuvaa</legend>
+<form action="../muokkaa" method="post">
+	<p><label>Elokuvan nimi: <input type="text" name="leffa"/></label><label>: {{rivi.0}}</label></p>
+	<p><label>Julkaisuvuosi: <input type="Number" name="vuosi"/></label><label>: {{rivi.1}}</label></p>
+	<p><label>Arvio: <input type="Number" name="arvio" min="0" max="10"/><label>: {{rivi.2}}</label></label></p>
+	<p><label>Vuokrahinta: <input type="Number" name="hinta" min="0" step="0.1"/><label>: {{rivi.3}}</label></label>
+	<p>
+		<label> Lajityyppi: 
+			<select name="genre">
+			<option value="tyhja"></option>
+			{%for lajityyppi, id in listaG%}
+				<option value= {{id}}>{{lajityyppi}}</option>
+			{%endfor%}
+			</select>
+		</label>
+		<label>: {{rivi.4}}</label>
+	</p>
+	<input type="hidden" value={{rivi.5}} name="leffaId"/>
+	<input type="submit" value="Vahvista" />
+</form>
+</fieldset>
+	   
