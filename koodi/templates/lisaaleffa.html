@@ -3,7 +3,7 @@
 {% block content %}
 	<fieldset>
 	<legend>Lisää elokuva</legend>
-	<form action="leffanlisays" method="post">
+	<form action="lisaaelokuva" method="post">
 		<p><label>Elokuvan nimi: <input type="text" name="leffa"/></label>
 			{%if virhe%}
 				<label>Syötä elokuvan nimi!</label>
@@ -32,6 +32,9 @@
 				</select>
 			</label>
 		</p>
+			{%if lvirhe%}
+				<p><label>Lisäys epäonnistui</label></p>
+			{%endif%}
 		<input type="submit" value="Lisää" />
 	</form>
 	</fieldset>

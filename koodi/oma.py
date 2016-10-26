@@ -77,6 +77,96 @@ def vuokrat():
     cur.close()
     return render_template("vuokrat.html",lista=lista)
    
+@app.route('/lisaa', methods=["POST", "GET"])
+@auth
+def lisaa():
+    cur=con.cursor()
+    cur.execute("""
+    SELECT Nimi, JasenId
+    FROM Jasen
+    """)
+    listaJ=[]
+    for rivi in cur:
+        listaJ.append((rivi['Nimi'],rivi['JasenId']))
+    cur.execute("""
+    SELECT Nimi, ElokuvaId
+    FROM Elokuva
+    """)
+    listaE=[]
+    for rivi in cur:
+        listaE.append((rivi['Nimi'],rivi['ElokuvaId']))
+    
+    virhe=("","","")
+    if(request.method=="POST"):
+        onnistui=True
+        virhe=lisays(request.form)
+        for i in virhe:
+            if i:
+                onnistui=False
+                break;
+        if(onnistui):   
+            return redirect(url_for('vuokrat'))
+    return render_template("lisaa.html",listaE=listaE,listaJ=listaJ,vvirhe=virhe[0],pvirhe=virhe[1],lvirhe=virhe[2])
+ 
+
+
+def lisays(lomake): 
+    jid= lomake.get("jasen")
+    eid= lomake.get("leffa")
+    vpv= lomake.get("vuokraus")
+    ppv= lomake.get("palautus") 
+    if(str(vpv)==""):
+        return ("Anna vuokrauspvm","","")
+    try:
+        vuokpaiv=parse(vpv).date()
+    except ValueError:
+        return ("Pvm muodossa YYYY-mm-dd","","")
+        
+    if(str(ppv)==""):
+        try:
+            con.execute("""
+            INSERT INTO Vuokraus (JasenId,ElokuvaId,vuokrauspvm)
+            VALUES (:jasenid, :elokuva, :vuokraus)
+            """, {"jasenid": int(jid), "elokuva": int(eid),"vuokraus": vuokpaiv})  
+            con.commit()
+        except:
+            return ("","","Virhe datan siirrossa tietokantaan")
+    else:
+        try:
+            try:
+                palpaiv=parse(ppv).date()
+            except ValueError:
+                return ("","Pvm muodossa YYYY-mm-dd","")
+            if(palpaiv < vuokpaiv):
+                return ("","Palautuspvm ei voi olla ennen vuokrausta","")
+            con.execute("""
+            INSERT INTO Vuokraus (JasenId,ElokuvaId,vuokrauspvm,palautuspvm)
+            VALUES (:jasenid, :elokuva, :vuokraus, :palautus )
+            """, {"jasenid": int(jid), "elokuva": int(eid),"vuokraus": vuokpaiv, "palautus": palpaiv})   
+            con.commit()
+        except:
+            return ("","","Virhe datan siirrossa tietokantaan")
+    return ("","","")
+  
+@app.route('/elokuvat')
+@auth
+def elokuvat():
+    try:
+        cur=con.cursor()
+        cur.execute("""
+        SELECT Nimi, ElokuvaId, tyypinnimi as tn, julkaisuvuosi as jv,arvio ,vuokrahinta as vh
+        FROM Elokuva, lajityyppi
+        WHERE Elokuva.lajityyppiId=lajityyppi.lajityyppiId
+        ORDER BY Nimi
+        """)
+    except Exception as e:
+        return (str(e))
+    lista=[]
+    for rivi in cur:                
+        lista.append((rivi['ElokuvaId'],"%s (%d), Genre: %s, Arvio: %d/10, vuokrahinta: %.1f euroa" %(rivi['Nimi'],rivi['jv'],rivi['tn'],rivi['arvio'],rivi['vh'])))
+    cur.close()
+    return render_template("elokuvat.html",lista=lista)
+  
 @app.route('/muokkaus/<id>')
 @auth
 def muokkaus(id):
@@ -146,113 +236,50 @@ def muokkaa():
         return (str(e))
     
     return redirect(url_for("elokuvat"))
-
-@app.route('/elokuvat')
-@auth
-def elokuvat():
-    try:
-        cur=con.cursor()
-        cur.execute("""
-        SELECT Nimi, ElokuvaId, tyypinnimi as tn, julkaisuvuosi as jv,arvio ,vuokrahinta as vh
-        FROM Elokuva, lajityyppi
-        WHERE Elokuva.lajityyppiId=lajityyppi.lajityyppiId
-        ORDER BY Nimi
-        """)
-    except Exception as e:
-        return (str(e))
-    lista=[]
-    for rivi in cur:                
-        lista.append((rivi['ElokuvaId'],"%s (%d), Genre: %s, Arvio: %d/10, vuokrahinta: %.1f euroa" %(rivi['Nimi'],rivi['jv'],rivi['tn'],rivi['arvio'],rivi['vh'])))
-    cur.close()
-    return render_template("elokuvat.html",lista=lista)
+ 
     
-@app.route('/lisaa', methods=["POST", "GET"])
-@auth
-def lisaa():
-    cur=con.cursor()
-    cur.execute("""
-    SELECT Nimi, JasenId
-    FROM Jasen
-    """)
-    listaJ=[]
-    for rivi in cur:
-        listaJ.append((rivi['Nimi'],rivi['JasenId']))
-    cur.execute("""
-    SELECT Nimi, ElokuvaId
-    FROM Elokuva
-    """)
-    listaE=[]
-    for rivi in cur:
-        listaE.append((rivi['Nimi'],rivi['ElokuvaId']))
-    
-    virhe=("","","")
+@app.route('/lisaaelokuva',methods=["POST","GET"])
+@auth   
+def lisaaelokuva():
+    listaG=haeGenret()
+    virhe=(False,False,False,False,False)
     if(request.method=="POST"):
         onnistui=True
-        virhe=lisays(request.form)
+        virhe=leffanlisays(request.form)
         for i in virhe:
             if i:
                 onnistui=False
-                break;
+                break
         if(onnistui):   
-	        return redirect(url_for('vuokrat'))
-    return render_template("lisaa.html",listaE=listaE,listaJ=listaJ,vvirhe=virhe[0],pvirhe=virhe[1],lvirhe=virhe[2])
- 
+            return redirect(url_for('elokuvat'))
+    
+    return render_template("lisaaleffa.html",listaG=listaG,virhe=virhe[0],avirhe=virhe[1],hvirhe=virhe[2],vvirhe=virhe[3],lvirhe=virhe[4])
+  
 
+def leffanlisays(lomake): 
+    gid= lomake.get("genre")
+    elokuva= lomake.get("leffa")
+    arvio=lomake.get("arvio")
+    hinta=lomake.get("hinta")
+    vuosi=lomake.get("vuosi")
 
-def lisays(lomake): 
-    jid= lomake.get("jasen")
-    eid= lomake.get("leffa")
-    vpv= lomake.get("vuokraus")
-    ppv= lomake.get("palautus") 
-    if(str(vpv)==""):
-        return ("ei vuokrauspaivaa","","")
+    virhe=elokuva==""
+    avirhe=arvio==""
+    hvirhe=hinta==""
+    vvirhe=vuosi==""
+    if(virhe or avirhe or hvirhe or vvirhe):
+        return (virhe,avirhe,hvirhe,vvirhe,False)
+    
     try:
-        vuokpaiv=parse(vpv).date()
-    except ValueError:
-        return ("vuokrauspaivassa vikaa","","")
-        
-    if(str(ppv)==""):
-        try:
-            con.execute("""
-            INSERT INTO Vuokraus (JasenId,ElokuvaId,vuokrauspvm)
-            VALUES (:jasenid, :elokuva, :vuokraus)
-            """, {"jasenid": int(jid), "elokuva": int(eid),"vuokraus": vuokpaiv})  
-            con.commit()
-        except:
-            return ("","","lisays epaonnistui")
-    else:
-        try:
-            try:
-                palpaiv=parse(ppv).date()
-            except ValueError:
-                return ("","palautuspaivassa vikaa","")
-            if(palpaiv < vuokpaiv):
-                return ("","Palautus ennen vuokrausta","")
-            con.execute("""
-            INSERT INTO Vuokraus (JasenId,ElokuvaId,vuokrauspvm,palautuspvm)
-            VALUES (:jasenid, :elokuva, :vuokraus, :palautus )
-            """, {"jasenid": int(jid), "elokuva": int(eid),"vuokraus": vuokpaiv, "palautus": palpaiv})   
-            con.commit()
-        except:
-            return ("","","lisays epaonnistui")
-    return ("","","")
+        con.execute("""
+        INSERT INTO Elokuva (Nimi, LajityyppiId, Vuokrahinta, Arvio, Julkaisuvuosi)
+        VALUES ( :elokuva, :genre, :hinta, :arvio, :vuosi)
+        """, {"elokuva": elokuva,"genre": int(gid), "hinta": float(hinta),"arvio":int(arvio),"vuosi":int(vuosi)})  
+        con.commit()
+    except:
+        return (False,False,False,False,True)
     
-    
-@app.route('/lisaaelokuva')
-@auth   
-def lisaaelokuva():
-    if(len(request.args)):
-        virhe= 'True'==request.args['virhe']
-        avirhe='True'==request.args['avirhe']
-        hvirhe='True'==request.args['hvirhe']
-        vvirhe='True'==request.args['vvirhe']
-    else:
-        virhe=False
-        avirhe=False
-        hvirhe=False
-        vvirhe=False
-    listaG=haeGenret()
-    return render_template("lisaaleffa.html",listaG=listaG,virhe=virhe,avirhe=avirhe,hvirhe=hvirhe,vvirhe=vvirhe)
+    return (False,False,False,False,False)
 
 def haeGenret():
     cur=con.cursor()
@@ -265,35 +292,7 @@ def haeGenret():
         listaG.append((rivi['tyypinnimi'],rivi['lajityyppiId']))
     cur.close()
     return listaG
-   
-@app.route('/leffanlisays', methods=["POST"])
-@auth
-def leffanlisays(): 
-    gid= request.form.get("genre")
-    elokuva= request.form.get("leffa")
-    arvio=request.form.get("arvio")
-    hinta=request.form.get("hinta")
-    vuosi=request.form.get("vuosi")
-
-    virhe=elokuva==""
-    avirhe=arvio==""
-    hvirhe=hinta==""
-    vvirhe=vuosi==""
-    if(virhe or avirhe or hvirhe or vvirhe):
-        return redirect(url_for('lisaaelokuva',virhe=virhe,avirhe=avirhe,hvirhe=hvirhe,vvirhe=vvirhe))
-    
-  
-    try:
-        con.execute("""
-        INSERT INTO Elokuva (Nimi, LajityyppiId, Vuokrahinta, Arvio, Julkaisuvuosi)
-        VALUES ( :elokuva, :genre, :hinta, :arvio, :vuosi)
-        """, {"elokuva": elokuva,"genre": int(gid), "hinta": float(hinta),"arvio":int(arvio),"vuosi":int(vuosi)})  
-        con.commit()
-    except Exception as e:
-        return str(e)
-    
-    return redirect(url_for('elokuvat'))
-
+ 
 if __name__ == '__main__':
     app.debug = True
     app.run(debug=True)
