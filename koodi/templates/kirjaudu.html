@@ -7,8 +7,8 @@
 <fieldset>
 <legend>Kirjaudu</legend>
 <form action="kirjaudu" method="post">
-	<p><label>Tunnus: <input type="text" name="tunnus"/></label></p>
-	<p><label>Salasana: <input type="password" name="salasana"/></label></p>
+	<p><label>Tunnus: <input type="text" name="tunnus"/></label><label>{{virhe.0}}</label></p>
+	<p><label>Salasana: <input type="password" name="salasana"/></label><label>{{virhe.1}}</label></p>
 	<p><input type="submit" value="kirjaudu"/></p>
 </form>
 </fieldset>

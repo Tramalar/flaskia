@@ -17,6 +17,7 @@ con.row_factory=sqlite3.Row
 
 @app.route('/kirjaudu',methods=["POST","GET"])
 def kirjaudu():
+    virhe=("","")
     if(request.method=="POST"):
         try:
             m = hashlib.sha512()
@@ -27,12 +28,17 @@ def kirjaudu():
             if(request.form.get('salasana')):
                 salasana=request.form.get('salasana')
             m.update(salasana)
-            if tunnus=="tiea218@foobar.example" and m.digest() == '\xb3z\reW\x08\xbe\xb4&\xa9\x86\xc0!\x12\x9bJ\xba&\x97>\x8c\xe6kzQn\x88x\r\xc8\x88\ncz8\xfa\xafn\xc0\xd1\x8d\xc0\x87!\x1a\xe3\xd9\xa6\xc3\x04^\x8f\x11\xcb\x03g\xd7\xc9\x87\rg\xc8Z\xfe':
-                session['logged'] = "Y"
-                return redirect(url_for('vuokrat'))
+            if tunnus=="tiea218@foobar.example":
+                if m.digest() == '\xb3z\reW\x08\xbe\xb4&\xa9\x86\xc0!\x12\x9bJ\xba&\x97>\x8c\xe6kzQn\x88x\r\xc8\x88\ncz8\xfa\xafn\xc0\xd1\x8d\xc0\x87!\x1a\xe3\xd9\xa6\xc3\x04^\x8f\x11\xcb\x03g\xd7\xc9\x87\rg\xc8Z\xfe':
+                    session['logged'] = "Y"
+                    return redirect(url_for('vuokrat'))
+                else:
+                    virhe=('',unicode('Väärä salasana',"UTF-8"))
+            else:
+                virhe=(unicode('Tunnusta ei löydy',"UTF-8"),'')
         except Exception as e:
             return str(e)
-    return render_template('kirjaudu.html')
+    return render_template('kirjaudu.html', virhe=virhe)
 
 
 def auth(f):
