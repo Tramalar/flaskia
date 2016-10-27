@@ -2,20 +2,14 @@
 {% block title %}Vuokrat{% endblock title%}
 {% block content %}
 	<ul>
-		{% set idNyt=-1 %}
-		{%for jid,jn,en,vp,pp in lista %}
-		    {%if not(idNyt==jid)%}
-			    {% if not(idNyt==-1)%} </ul>{% endif %}
-				<li>{{jn}}</li>
-					<ul>
-						<li>{{en}}, {{vp}}, {{pp}}</li>
-					
-			{% else %}
-						<li>{{en}}, {{vp}}, {{pp}}</li>
-			{%endif%}
-		    {% set idNyt=jid %}
-		{%endfor%}
-	    </ul>
+		{% for jasen, vuokrat in lista %}
+		    <li>{{jasen}}</li>
+			<ul>
+			    {% for v in vuokrat %}
+				    <li>{{v.0}}, vuokrattu: {{v.1}}, palautettu: {{v.2}}</li>
+				{%endfor%}
+			</ul>
+	    {% endfor %}
 	</ul>
 {% endblock content %}    
 

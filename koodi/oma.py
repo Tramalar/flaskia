@@ -7,7 +7,7 @@ import sys
 import hashlib
 from functools import wraps
 from flask import Flask, session, redirect, url_for, escape, request, Response, render_template
-from datetime import date
+from datetime import date, datetime
 from dateutil.parser import parse
 app = Flask(__name__)
 app.secret_key='l\x04\\\xa6dO\xccSJ\x14\x1c\x8e\xd1\xb4\xa7\xa5\xe4\xbd6\xbb\x13\xb3\x92\x91'
@@ -67,21 +67,32 @@ def vuokrat():
     try:
         cur=con.cursor()
         cur.execute("""
-        SELECT Jasen.Nimi as jn, jasen.jasenid as jid, Elokuva.Nimi as en,  vuokrauspvm, palautuspvm
-        FROM Vuokraus, Elokuva, Jasen
-        WHERE Vuokraus.JasenId=Jasen.JasenId AND Elokuva.ElokuvaId=Vuokraus.ElokuvaId
-        ORDER BY Jasen.Nimi, jasen.jasenid, vuokrauspvm;
+        SELECT jasenid as jid, nimi as jn
+        FROM Jasen
+        ORDER BY nimi, jasenid;
         """)
+        jasenet=[]
+        for rivi in cur:
+            jasenet.append( (rivi['jn'],rivi['jid']) )
+        jasenenvuokrat=[]
+        for (jasen,id) in jasenet:
+            vuokrat=[]
+            cur.execute("""
+            SELECT Elokuva.Nimi as en,  vuokrauspvm, palautuspvm
+            FROM Vuokraus, Elokuva
+            WHERE Vuokraus.JasenId= ?  AND Elokuva.ElokuvaId=Vuokraus.ElokuvaId
+            ORDER BY vuokrauspvm;
+            """,(id,))
+            for rivi in cur:
+                if rivi['palautuspvm']:
+                    vuokrat.append((rivi['en'], rivi['vuokrauspvm'],rivi['palautuspvm']))
+                else:
+                    vuokrat.append((rivi['en'], rivi['vuokrauspvm'],"-"))
+            jasenenvuokrat.append((jasen,vuokrat))
+        cur.close()
     except Exception as e:
         return (str(e))
-    lista=[]
-    for rivi in cur:
-        if(rivi['palautuspvm']):
-            lista.append((rivi['jid'],rivi['jn'],rivi['en'],rivi['vuokrauspvm'],rivi['palautuspvm']))
-        else:                       
-            lista.append((rivi['jid'],rivi['jn'],rivi['en'],rivi['vuokrauspvm'],"-"))
-    cur.close()
-    return render_template("vuokrat.html",lista=lista)
+    return render_template("vuokrat.html",lista=jasenenvuokrat)
    
 @app.route('/lisaa', methods=["POST", "GET"])
 @auth
@@ -126,7 +137,11 @@ def lisays(lomake):
     try:
         vuokpaiv=parse(vpv).date()
     except ValueError:
-        return ("Pvm muodossa YYYY-mm-dd","","")
+        return ("Virheellinen pvm","","")
+    tanaan=date.today()
+    if(vuokpaiv<tanaan):
+        return ("Antamasi vuokrauspvm on jo mennyt ohi","","")
+        
         
     if(str(ppv)==""):
         try:
@@ -142,7 +157,7 @@ def lisays(lomake):
             try:
                 palpaiv=parse(ppv).date()
             except ValueError:
-                return ("","Pvm muodossa YYYY-mm-dd","")
+                return ("","Virheellinen pvm","")
             if(palpaiv < vuokpaiv):
                 return ("","Palautuspvm ei voi olla ennen vuokrausta","")
             con.execute("""
@@ -154,22 +169,64 @@ def lisays(lomake):
             return ("","","Virhe datan siirrossa tietokantaan")
     return ("","","")
   
-@app.route('/elokuvat')
+@app.route('/elokuvat', methods=["POST","GET"])
 @auth
 def elokuvat():
     try:
+        if (request.method=="POST"):
+            id= request.form.get('tunniste')
+            jarj= request.form.get('jarjestys')
+            con.execute("""
+            DELETE FROM Elokuva
+            WHERE ElokuvaId= ? ;
+            """,(int(id),))
+            con.commit()
+            return redirect(url_for('elokuvat',jarjestys=jarj))
+    except Exception as e:
+        return str(e)
+    jarjesta="Nimi"
+    if(len(request.args)):
+        jarjesta=request.args['jarjestys']   
+    try:
         cur=con.cursor()
-        cur.execute("""
-        SELECT Nimi, ElokuvaId, tyypinnimi as tn, julkaisuvuosi as jv,arvio ,vuokrahinta as vh
-        FROM Elokuva, lajityyppi
-        WHERE Elokuva.lajityyppiId=lajityyppi.lajityyppiId
-        ORDER BY Nimi
-        """)
+        if(jarjesta=="Nimi"):
+            cur.execute("""
+            SELECT Nimi, elokuva.ElokuvaId, tyypinnimi as tn, julkaisuvuosi as jv,arvio ,vuokrahinta as vh, count(vuokraus.elokuvaid) as lkm
+            FROM Elokuva, lajityyppi
+            LEFT JOIN vuokraus ON elokuva.elokuvaid=vuokraus.elokuvaid
+            WHERE Elokuva.lajityyppiId=lajityyppi.lajityyppiId
+            GROUP BY elokuva.elokuvaid
+            ORDER BY Nimi""")
+        if(jarjesta=="lkm"):
+            cur.execute("""
+            SELECT Nimi, elokuva.ElokuvaId, tyypinnimi as tn, julkaisuvuosi as jv,arvio ,vuokrahinta as vh, count(vuokraus.elokuvaid) as lkm
+            FROM Elokuva, lajityyppi
+            LEFT JOIN vuokraus ON elokuva.elokuvaid=vuokraus.elokuvaid
+            WHERE Elokuva.lajityyppiId=lajityyppi.lajityyppiId
+            GROUP BY elokuva.elokuvaid
+            ORDER BY lkm""")
+        if(jarjesta=="jv"):
+            cur.execute("""
+            SELECT Nimi, elokuva.ElokuvaId, tyypinnimi as tn, julkaisuvuosi as jv,arvio ,vuokrahinta as vh, count(vuokraus.elokuvaid) as lkm
+            FROM Elokuva, lajityyppi
+            LEFT JOIN vuokraus ON elokuva.elokuvaid=vuokraus.elokuvaid
+            WHERE Elokuva.lajityyppiId=lajityyppi.lajityyppiId
+            GROUP BY elokuva.elokuvaid
+            ORDER BY jv""")
+        if(jarjesta=="arvio"):
+            cur.execute("""
+            SELECT Nimi, elokuva.ElokuvaId, tyypinnimi as tn, julkaisuvuosi as jv,arvio ,vuokrahinta as vh, count(vuokraus.elokuvaid) as lkm
+            FROM Elokuva, lajityyppi
+            LEFT JOIN vuokraus ON elokuva.elokuvaid=vuokraus.elokuvaid
+            WHERE Elokuva.lajityyppiId=lajityyppi.lajityyppiId
+            GROUP BY elokuva.elokuvaid
+            ORDER BY arvio""")
     except Exception as e:
         return (str(e))
     lista=[]
-    for rivi in cur:                
-        lista.append((rivi['ElokuvaId'],"%s (%d), Genre: %s, Arvio: %d/10, vuokrahinta: %.1f euroa" %(rivi['Nimi'],rivi['jv'],rivi['tn'],rivi['arvio'],rivi['vh'])))
+    for rivi in cur:       
+        lkm=rivi['lkm'] 
+        lista.append((lkm,jarjesta,rivi['ElokuvaId'],"%s (%d), Genre: %s, Arvio: %d/10, vuokrahinta: %.1f euroa, vuokrauksia: %d" %(rivi['Nimi'],rivi['jv'],rivi['tn'],rivi['arvio'],rivi['vh'],lkm)))
     cur.close()
     return render_template("elokuvat.html",lista=lista)
   

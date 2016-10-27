@@ -5,8 +5,16 @@
 	display:inline;
 	padding:20px;
 }
+.leffalinkit{
+	margin:15px;
+}
 
-.leffalinkki{
+.leffalinkit a{
 	text-decoration:none;
 	color:black;
+}
+
+.poistonappi{
+	display:inline;
+	margin-left:20px;
 }

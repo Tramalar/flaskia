@@ -2,9 +2,28 @@
 {% block title %}Elokuvat{% endblock title%}
 {% block content %}
 	<ul>
-		{% for id, i in lista %}
-		     <li><a href="./muokkaus/{{id}}" class="leffalinkki">{{i}}</a></li>
+		{% for (lkm,j, id, i) in lista %}
+		     <li class="leffalinkit"><a href="./muokkaus/{{id}}" class="leffalinkki">{{i}}</a>
+				{% if not lkm %}
+				<form method="post" action="elokuvat" class="poistonappi">
+					<input type="hidden" name="tunniste" value={{id}}></input>
+					<input type="hidden" name="jarjestys" value={{j}}></input>
+					<input type="submit" value="Poista"/>
+				</form>
+				{% endif %}
+			 </li>
 		{% endfor %}
 	</ul>
+	<footer>
+	<fieldset>
+	<legend>Järjestä:</legend>
+	    <ul class=navigointi>
+		   <li><a href="./elokuvat">Nimen mukaan</a></li>
+		   <li><a href="./elokuvat?jarjestys=arvio">Arvion mukaan</a></li>
+		   <li><a href="./elokuvat?jarjestys=jv">Julkaisuvuoden mukaan</a></li>
+		   <li><a href="./elokuvat?jarjestys=lkm">Vuokrausten lukumäärän mukaan</a></li>
+		</ul>
+	</footer>
+	</fieldset>
 {% endblock content %}    
 
